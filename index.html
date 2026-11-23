@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hayfever Weather Australia</title>
+<style>
+:root{--bg:#f6f8f4;--card:#fff;--tx:#1d2a1f;--mut:#5c6b5f;--ac:#2f7d4f;--bd:#dfe6dc;--low:#2f7d4f;--mod:#b7791f;--high:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a14;--card:#1b261e;--tx:#e8f0e9;--mut:#9bb09f;--ac:#5fc38a;--bd:#2c3b30;--low:#5fc38a;--mod:#e0a84a;--high:#ef7b6e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121a14;--card:#1b261e;--tx:#e8f0e9;--mut:#9bb09f;--ac:#5fc38a;--bd:#2c3b30;--low:#5fc38a;--mod:#e0a84a;--high:#ef7b6e;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:8px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px;font-size:.9rem}
+select{width:100%;padding:12px;font-size:1rem;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-top:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--bd)}
+.row:first-child{border-top:0}
+.chip{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;color:#fff;white-space:nowrap}
+.Low{background:var(--low)}.Moderate{background:var(--mod)}.High{background:var(--high)}
+.big{font-size:2.4rem;font-weight:700;line-height:1.1}
+.mut{color:var(--mut);font-size:.88rem}
+ul{padding-left:20px;margin:8px 0 0}li{margin:5px 0}
+.note{border-left:4px solid var(--mod);padding:8px 12px;margin-top:12px;background:var(--card);border-radius:6px;font-size:.9rem}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+a{color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+<h1>Hayfever Weather</h1>
+<p class="sub">Forecast and prep tips for Australian cities and towns</p>
+<select id="city" aria-label="Choose a place"></select>
+<div id="status" class="mut" style="margin-top:8px"></div>
+<div id="out"></div>
+<div id="manual" class="card" hidden>
+<strong>Enter today’s conditions</strong>
+<p class="mut" style="margin:4px 0 0">Live weather can’t load in this view, so pick the conditions from the BOM forecast to get tips.</p>
+<div class="grid">
+<select id="mT"><option value="14">Cool</option><option value="20" selected>Mild</option><option value="27">Warm</option><option value="34">Hot</option></select>
+<select id="mW"><option value="8">Calm</option><option value="22" selected>Breezy</option><option value="35">Windy</option></select>
+<select id="mR"><option value="0" selected>Dry</option><option value="3">Showers</option><option value="10">Storms</option></select>
+</div>
+<div id="mOut"></div>
+</div>
+<p class="mut" style="margin-top:16px">Risk levels are estimated from temperature, wind and rain. They are not measured pollen counts. For pollen counts, check a local service such as Melbourne Pollen or AirRater. Not medical advice: see a GP or pharmacist if symptoms persist.</p>
+</main>
+<script>
+var CITIES=[["Sydney NSW",-33.87,151.21,"nsw/sydney"],["Melbourne VIC",-37.81,144.96,"vic/melbourne"],["Brisbane QLD",-27.47,153.03,"qld/brisbane"],["Perth WA",-31.95,115.86,"wa/perth"],["Adelaide SA",-34.93,138.6,"sa/adelaide"],["Canberra ACT",-35.28,149.13,"act/canberra"],["Hobart TAS",-42.88,147.33,"tas/hobart"],["Darwin NT",-12.46,130.84,"nt/darwin"],["Newcastle NSW",-32.93,151.78,"nsw/newcastle"],["Wollongong NSW",-34.42,150.89,"nsw/wollongong"],["Albury NSW",-36.08,146.92,"nsw/albury"],["Gold Coast QLD",-28.02,153.4,"qld/gold-coast"],["Cairns QLD",-16.92,145.77,"qld/cairns"],["Toowoomba QLD",-27.56,151.95,"qld/toowoomba"],["Geelong VIC",-38.15,144.36,"vic/geelong"],["Ballarat VIC",-37.56,143.85,"vic/ballarat"],["Launceston TAS",-41.43,147.14,"tas/launceston"],["Alice Springs NT",-23.7,133.88,"nt/alice-springs"]];
+var WC={0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Cloudy",45:"Fog",48:"Fog",51:"Light drizzle",53:"Drizzle",55:"Drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",80:"Showers",81:"Showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};
+var $=function(i){return document.getElementById(i)};
+var sel=$("city");
+CITIES.forEach(function(c,i){var o=document.createElement("option");o.value=i;o.textContent=c[0];sel.appendChild(o)});
+function risk(t,w,r){var s=0;if(t>=18)s++;if(t>=24)s++;if(w>=20)s++;if(w>=30)s++;if(r<0.5)s++;if(r>=2)s-=2;return s>=4?"High":s>=2?"Moderate":"Low"}
+function tips(l,storm){
+var b={High:["Take your antihistamine or nasal spray before you go out, not after symptoms start","Keep windows shut and use recirculate on the car air con","Wear wraparound sunglasses; shower and change clothes when you get home","Plan outdoor exercise for after rain or late afternoon in the evening, avoid mornings and windy midday"],Moderate:["Keep your usual medication handy and consider taking it before heading out","Dab a little barrier balm around your nostrils","Rinse your nose with saline in the evening","Dry washing indoors on windy days"],Low:["Good day for fresh air: open windows if you like","Still wash your face and rinse your nose after time outdoors","Keep medication handy in case of local hotspots like freshly mown grass"]}[l].slice();
+if(storm)b.push("Thunderstorm asthma can occur in spring: if you have hayfever or asthma, keep your reliever with you, stay indoors during storms and follow local health warnings");
+return "<ul>"+b.map(function(x){return "<li>"+x+"</li>"}).join("")+"</ul>"}
+function day(d){return new Date(d+"T00:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})}
+function show(days,cur,c){
+var td=days[0],l=risk(td.tmax,td.w,td.r);
+var h='<div class="card"><div class="mut">'+c[0]+' · today</div><div class="big">'+Math.round(cur!=null?cur:td.tmax)+'°</div><div>'+td.tx+' · High '+Math.round(td.tmax)+'° / Low '+Math.round(td.tmin)+'° · Wind up to '+Math.round(td.w)+' km/h</div>';
+h+='<div style="margin-top:10px">Hayfever risk today: <span class="chip '+l+'">'+l+'</span></div>'+tips(l,days.some(function(d){return d.code>=95}))+'<p class="mut"><a href="https://www.bom.gov.au/places/'+c[3]+'/forecast/" target="_blank" rel="noopener">Official BOM forecast ↗</a></p></div>';
+h+='<div class="card"><strong>Next 7 days</strong>';
+days.forEach(function(d){var k=risk(d.tmax,d.w,d.r);h+='<div class="row"><div><div>'+day(d.date)+'</div><div class="mut">'+d.tx+' · '+Math.round(d.tmin)+'–'+Math.round(d.tmax)+'° · wind '+Math.round(d.w)+' km/h'+(d.r>0.1?' · '+d.r.toFixed(1)+' mm':'')+'</div></div><span class="chip '+k+'">'+k+'</span></div>'});
+$("out").innerHTML=h+"</div>"}
+function url(c,m){return "https://api.open-meteo.com/v1/forecast?latitude="+c[1]+"&longitude="+c[2]+"&current=temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=7"+(m?"&models=bom_access_global":"")}
+function get(c,m){return fetch(url(c,m)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){var d=j.daily;if(!d||d.temperature_2m_max[0]==null)throw 0;return j})}
+function load(){
+var c=CITIES[sel.value];$("status").textContent="Loading forecast…";$("manual").hidden=true;
+get(c,true).catch(function(){return get(c,false)}).then(function(j){
+var d=j.daily,days=d.time.map(function(t,i){return{date:t,tmax:d.temperature_2m_max[i],tmin:d.temperature_2m_min[i],w:d.wind_speed_10m_max[i]||0,r:d.precipitation_sum[i]||0,code:d.weather_code[i],tx:WC[d.weather_code[i]]||"Mixed"}});
+show(days,j.current&&j.current.temperature_2m,c);
+$("status").textContent="Live forecast, based on Bureau of Meteorology model data via Open-Meteo. Updated "+new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"})
+}).catch(function(){
+$("out").innerHTML='<div class="note">Live weather isn’t available in this view (outside connections are blocked). Open the downloaded copy of this page on your own hosting for live 7-day forecasts. You can still use the manual picker below, and the official BOM forecast is one tap away: <a href="https://www.bom.gov.au/places/'+c[3]+'/forecast/" target="_blank" rel="noopener">BOM '+c[0]+' ↗</a></div>';
+$("status").textContent="";$("manual").hidden=false;manual()})}
+function manual(){var l=risk(+$("mT").value,+$("mW").value,+$("mR").value);$("mOut").innerHTML='<p>Hayfever risk: <span class="chip '+l+'">'+l+'</span></p>'+tips(l,+$("mR").value>=10)}
+["mT","mW","mR"].forEach(function(i){$(i).addEventListener("change",manual)});
+sel.addEventListener("change",load);load();
+</script>
+</body>
+</html>
