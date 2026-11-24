@@ -66,19 +66,20 @@ h+='<div class="card"><strong>Next 7 days</strong>';
 days.forEach(function(d){var k=risk(d.tmax,d.w,d.r);h+='<div class="row"><div><div>'+day(d.date)+'</div><div class="mut">'+d.tx+' · '+Math.round(d.tmin)+'–'+Math.round(d.tmax)+'° · wind '+Math.round(d.w)+' km/h'+(d.r>0.1?' · '+d.r.toFixed(1)+' mm':'')+'</div></div><span class="chip '+k+'">'+k+'</span></div>'});
 $("out").innerHTML=h+"</div>"}
 function url(c,m){return "https://api.open-meteo.com/v1/forecast?latitude="+c[1]+"&longitude="+c[2]+"&current=temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=7"+(m?"&models=bom_access_global":"")}
-function get(c,m){return fetch(url(c,m)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){var d=j.daily;if(!d||d.temperature_2m_max[0]==null)throw 0;return j})}
+function get(c,m){return fetch(url(c,m),{cache:"no-store"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){var d=j.daily;if(!d||d.temperature_2m_max[0]==null)throw 0;if(m&&d.time[0]<new Date().toLocaleDateString("en-CA",{timeZone:j.timezone}))throw 0;j._bom=m;return j})}
 function load(){
 var c=CITIES[sel.value];$("status").textContent="Loading forecast…";$("manual").hidden=true;
 get(c,true).catch(function(){return get(c,false)}).then(function(j){
 var d=j.daily,days=d.time.map(function(t,i){return{date:t,tmax:d.temperature_2m_max[i],tmin:d.temperature_2m_min[i],w:d.wind_speed_10m_max[i]||0,r:d.precipitation_sum[i]||0,code:d.weather_code[i],tx:WC[d.weather_code[i]]||"Mixed"}});
 show(days,j.current&&j.current.temperature_2m,c);
-$("status").textContent="Live forecast, based on Bureau of Meteorology model data via Open-Meteo. Updated "+new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"})
+$("status").textContent="Live forecast from "+(j._bom?"Bureau of Meteorology model data":"Open-Meteo’s standard model")+", via Open-Meteo. Updated "+new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"})
 }).catch(function(){
 $("out").innerHTML='<div class="note">Live weather isn’t available in this view (outside connections are blocked). Open the downloaded copy of this page on your own hosting for live 7-day forecasts. You can still use the manual picker below, and the official BOM forecast is one tap away: <a href="https://www.bom.gov.au/places/'+c[3]+'/forecast/" target="_blank" rel="noopener">BOM '+c[0]+' ↗</a></div>';
 $("status").textContent="";$("manual").hidden=false;manual()})}
 function manual(){var l=risk(+$("mT").value,+$("mW").value,+$("mR").value);$("mOut").innerHTML='<p>Hayfever risk: <span class="chip '+l+'">'+l+'</span></p>'+tips(l,+$("mR").value>=10)}
 ["mT","mW","mR"].forEach(function(i){$(i).addEventListener("change",manual)});
 sel.addEventListener("change",load);load();
+document.addEventListener("visibilitychange",function(){if(!document.hidden)load()});
 </script>
 </body>
 </html>
